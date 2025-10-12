@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Employees - Bank Management</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+<div class="container mt-5">
+  <h2 class="text-center text-primary mb-4">👔 Employee Management</h2>
+
+  <!-- Flash Messages -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ category }} text-center">{{ message }}</div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  <!-- Add Employee Form -->
+  <form method="POST" class="card p-4 shadow-sm mb-4">
+    <h5 class="mb-3">➕ Add New Employee</h5>
+    <div class="row g-3">
+      <div class="col-md-4">
+        <label class="form-label">Name</label>
+        <input type="text" name="name" class="form-control" required>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Role</label>
+        <input type="text" name="role" class="form-control" required>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Salary</label>
+        <input type="number" name="salary" step="0.01" class="form-control" required>
+      </div>
+    </div>
+    <button class="btn btn-primary mt-3 w-100">Add Employee</button>
+  </form>
+
+  <!-- Employee List -->
+  <h5>📋 Employee List</h5>
+  <table class="table table-striped table-bordered mt-3">
+    <thead class="table-primary">
+      <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>Role</th>
+        <th>Salary</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% if employees %}
+        {% for e in employees %}
+        <tr>
+          <td>{{ e.employee_id }}</td>
+          <td>{{ e.name }}</td>
+          <td>{{ e.role }}</td>
+          <td>₹{{ "%.2f"|format(e.salary) }}</td>
+        </tr>
+        {% endfor %}
+      {% else %}
+        <tr>
+          <td colspan="4" class="text-center text-muted">No employees found</td>
+        </tr>
+      {% endif %}
+    </tbody>
+  </table>
+
+  <a href="/" class="btn btn-secondary mt-3">⬅ Back</a>
+</div>
+</body>
+</html>
