@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, flash
-import mysql.connector
+import psycopg2
+import psycopg2.extras
 from decimal import Decimal
 import os
 
@@ -8,12 +9,15 @@ app.secret_key = "bank_secret_key"
 
 # ---------------- Database Connection ----------------
 def get_db_connection():
-    return mysql.connector.connect(
-        host="localhost",         # Update if using remote DB
-        user="root",              # Your MySQL username
-        password="Rajisakthi@0912",  # Your MySQL password
-        database="bankdb"
-    )
+    """Connect to PostgreSQL using DATABASE_URL from environment variables."""
+    database_url = os.environ.get("DATABASE_URL")
+    if not database_url:
+        raise RuntimeError("❌ DATABASE_URL not found. Set it in your Render environment variables.")
+    
+    # Many hosted Postgres databases require SSL mode
+    conn = psycopg2.connect(dsn=database_url, sslmode="require")
+    return conn
+
 
 # ---------------- Home Page ----------------
 @app.route('/')
@@ -25,7 +29,7 @@ def home():
 @app.route('/customers', methods=['GET', 'POST'])
 def customers():
     conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
     if request.method == 'POST':
         name = request.form['name']
@@ -43,6 +47,8 @@ def customers():
 
     cursor.execute("SELECT * FROM Customer ORDER BY customer_id DESC")
     customers = cursor.fetchall()
+
+    cursor.close()
     conn.close()
     return render_template('customers.html', customers=customers)
 
@@ -51,7 +57,7 @@ def customers():
 @app.route('/accounts', methods=['GET', 'POST'])
 def accounts():
     conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
     if request.method == 'POST':
         customer_id = request.form['customer_id']
@@ -78,6 +84,8 @@ def accounts():
         ORDER BY a.account_id DESC
     """)
     accounts = cursor.fetchall()
+
+    cursor.close()
     conn.close()
     return render_template('accounts.html', accounts=accounts, customers=customers)
 
@@ -86,7 +94,7 @@ def accounts():
 @app.route('/transactions', methods=['GET', 'POST'])
 def transactions():
     conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
     if request.method == 'POST':
         account_id = request.form['account_id']
@@ -98,6 +106,7 @@ def transactions():
 
         if not result:
             flash("❌ Invalid Account ID!", "danger")
+            cursor.close()
             conn.close()
             return redirect(url_for('transactions'))
 
@@ -108,11 +117,13 @@ def transactions():
         elif transaction_type == 'Withdraw':
             if balance < amount:
                 flash("⚠️ Insufficient funds!", "warning")
+                cursor.close()
                 conn.close()
                 return redirect(url_for('transactions'))
             new_balance = balance - amount
         else:
             flash("❌ Invalid transaction type!", "danger")
+            cursor.close()
             conn.close()
             return redirect(url_for('transactions'))
 
@@ -135,6 +146,8 @@ def transactions():
         ORDER BY t.transaction_date DESC
     """)
     transactions = cursor.fetchall()
+
+    cursor.close()
     conn.close()
     return render_template('transactions.html', accounts=accounts, transactions=transactions)
 
@@ -143,7 +156,7 @@ def transactions():
 @app.route('/employees', methods=['GET', 'POST'])
 def employees():
     conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
     if request.method == 'POST':
         name = request.form['name']
@@ -159,11 +172,13 @@ def employees():
 
     cursor.execute("SELECT * FROM Employee ORDER BY employee_id DESC")
     employees = cursor.fetchall()
+
+    cursor.close()
     conn.close()
     return render_template('employees.html', employees=employees)
 
 
 # ---------------- Run Flask App ----------------
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))  # Use env PORT if available
+    port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
